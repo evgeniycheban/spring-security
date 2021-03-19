@@ -19,8 +19,8 @@ package org.springframework.security.access.intercept.aopalliance;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 
-import org.springframework.security.access.method.AuthorizationManagerAfterAdvice;
-import org.springframework.security.access.method.AuthorizationManagerBeforeAdvice;
+import org.springframework.security.access.method.AuthorizationMethodAfterAdvice;
+import org.springframework.security.access.method.AuthorizationMethodBeforeAdvice;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -32,17 +32,17 @@ import org.springframework.security.core.context.SecurityContextHolder;
  */
 public final class AuthorizationMethodInterceptor implements MethodInterceptor {
 
-	private final AuthorizationManagerBeforeAdvice<MethodInvocation> beforeAdvice;
+	private final AuthorizationMethodBeforeAdvice<MethodInvocation> beforeAdvice;
 
-	private final AuthorizationManagerAfterAdvice<MethodInvocation> afterAdvice;
+	private final AuthorizationMethodAfterAdvice<MethodInvocation> afterAdvice;
 
 	/**
 	 * Creates an instance.
-	 * @param beforeAdvice the {@link AuthorizationManagerBeforeAdvice} to use
-	 * @param afterAdvice the {@link AuthorizationManagerAfterAdvice} to use
+	 * @param beforeAdvice the {@link AuthorizationMethodBeforeAdvice} to use
+	 * @param afterAdvice the {@link AuthorizationMethodAfterAdvice} to use
 	 */
-	public AuthorizationMethodInterceptor(AuthorizationManagerBeforeAdvice<MethodInvocation> beforeAdvice,
-			AuthorizationManagerAfterAdvice<MethodInvocation> afterAdvice) {
+	public AuthorizationMethodInterceptor(AuthorizationMethodBeforeAdvice<MethodInvocation> beforeAdvice,
+										  AuthorizationMethodAfterAdvice<MethodInvocation> afterAdvice) {
 		this.beforeAdvice = beforeAdvice;
 		this.afterAdvice = afterAdvice;
 	}
@@ -54,9 +54,9 @@ public final class AuthorizationMethodInterceptor implements MethodInterceptor {
 	 */
 	@Override
 	public Object invoke(MethodInvocation invocation) throws Throwable {
-		this.beforeAdvice.verify(this::getAuthentication, invocation);
+		this.beforeAdvice.before(this::getAuthentication, invocation);
 		Object returnedObject = invocation.proceed();
-		return this.afterAdvice.check(this::getAuthentication, invocation, returnedObject);
+		return this.afterAdvice.after(this::getAuthentication, invocation, returnedObject);
 	}
 
 	private Authentication getAuthentication() {

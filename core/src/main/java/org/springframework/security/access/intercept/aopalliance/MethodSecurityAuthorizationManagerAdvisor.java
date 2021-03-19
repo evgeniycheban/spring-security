@@ -23,12 +23,12 @@ import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.aop.Pointcut;
 import org.springframework.aop.support.AbstractPointcutAdvisor;
 import org.springframework.aop.support.Pointcuts;
-import org.springframework.security.access.method.AuthorizationManagerAfterAdvice;
-import org.springframework.security.access.method.AuthorizationManagerBeforeAdvice;
+import org.springframework.security.access.method.AuthorizationMethodAfterAdvice;
+import org.springframework.security.access.method.AuthorizationMethodBeforeAdvice;
 
 /**
- * Advisor driven by the {@link AuthorizationManagerBeforeAdvice} and the
- * {@link AuthorizationManagerAfterAdvice}, used to exclude a {@link MethodInterceptor}
+ * Advisor driven by the {@link AuthorizationMethodBeforeAdvice} and the
+ * {@link AuthorizationMethodAfterAdvice}, used to exclude a {@link MethodInterceptor}
  * from public (non-secure) methods.
  *
  * @author Evgeniy Cheban
@@ -42,12 +42,12 @@ public final class MethodSecurityAuthorizationManagerAdvisor extends AbstractPoi
 	/**
 	 * Creates an instance.
 	 * @param advice the {@link Advice} to use
-	 * @param beforeAdvice the {@link AuthorizationManagerBeforeAdvice} to use
-	 * @param afterAdvice the {@link AuthorizationManagerAfterAdvice} to use
+	 * @param beforeAdvice the {@link AuthorizationMethodBeforeAdvice} to use
+	 * @param afterAdvice the {@link AuthorizationMethodAfterAdvice} to use
 	 */
 	public MethodSecurityAuthorizationManagerAdvisor(Advice advice,
-			AuthorizationManagerBeforeAdvice<MethodInvocation> beforeAdvice,
-			AuthorizationManagerAfterAdvice<MethodInvocation> afterAdvice) {
+			AuthorizationMethodBeforeAdvice<MethodInvocation> beforeAdvice,
+			AuthorizationMethodAfterAdvice<MethodInvocation> afterAdvice) {
 		this.advice = advice;
 		this.pointcut = Pointcuts.union(beforeAdvice, afterAdvice);
 	}

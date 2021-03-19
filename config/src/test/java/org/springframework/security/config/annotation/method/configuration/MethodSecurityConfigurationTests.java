@@ -17,7 +17,6 @@
 package org.springframework.security.config.annotation.method.configuration;
 
 import java.io.Serializable;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
@@ -28,7 +27,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import org.springframework.aop.MethodMatcher;
-import org.springframework.aop.support.StaticMethodMatcher;
+import org.springframework.aop.support.JdkRegexpMethodPointcut;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.access.AccessDeniedException;
@@ -37,9 +36,11 @@ import org.springframework.security.access.annotation.BusinessService;
 import org.springframework.security.access.annotation.ExpressionProtectedBusinessServiceImpl;
 import org.springframework.security.access.expression.method.DefaultMethodSecurityExpressionHandler;
 import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler;
-import org.springframework.security.access.method.AuthorizationManagerAfterAdvice;
-import org.springframework.security.access.method.AuthorizationManagerBeforeAdvice;
+import org.springframework.security.access.method.AuthorizationManagerMethodBeforeAdvice;
+import org.springframework.security.access.method.AuthorizationMethodAfterAdvice;
+import org.springframework.security.access.method.AuthorizationMethodBeforeAdvice;
 import org.springframework.security.authorization.AuthorizationDecision;
+import org.springframework.security.authorization.AuthorizationManager;
 import org.springframework.security.config.test.SpringTestRule;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.test.context.annotation.SecurityTestExecutionListeners;
@@ -237,7 +238,7 @@ public class MethodSecurityConfigurationTests {
 		this.spring.register(CustomAuthorizationManagerAfterAdviceConfig.class, MethodSecurityServiceConfig.class)
 				.autowire();
 		assertThatExceptionOfType(AccessDeniedException.class).isThrownBy(this.methodSecurityService::securedUser)
-				.withMessage("Access Denied for User 'joe'");
+				.withMessage("Access Denied");
 	}
 
 	@EnableMethodSecurity
@@ -288,25 +289,12 @@ public class MethodSecurityConfigurationTests {
 	static class CustomAuthorizationManagerBeforeAdviceConfig {
 
 		@Bean
-		AuthorizationManagerBeforeAdvice<MethodInvocation> customBeforeAdvice() {
-			return new AuthorizationManagerBeforeAdvice<MethodInvocation>() {
-				@Override
-				public MethodMatcher getMethodMatcher() {
-					return new StaticMethodMatcher() {
-						@Override
-						public boolean matches(Method method, Class<?> targetClass) {
-							return "securedUser".equals(method.getName())
-									&& MethodSecurityServiceImpl.class == targetClass;
-						}
-					};
-				}
-
-				@Override
-				public AuthorizationDecision check(Supplier<Authentication> authentication,
-						MethodInvocation methodInvocation) {
-					return new AuthorizationDecision("bob".equals(authentication.get().getName()));
-				}
-			};
+		AuthorizationMethodBeforeAdvice<MethodInvocation> customBeforeAdvice() {
+			JdkRegexpMethodPointcut methodMatcher = new JdkRegexpMethodPointcut();
+			methodMatcher.setPattern(".*MethodSecurityServiceImpl.*securedUser");
+			AuthorizationManager<MethodInvocation> authorizationManager = (authentication, mi) ->
+				new AuthorizationDecision("bob".equals(authentication.get().getName()));
+			return new AuthorizationManagerMethodBeforeAdvice<>(methodMatcher, authorizationManager);
 		}
 
 	}
@@ -315,27 +303,28 @@ public class MethodSecurityConfigurationTests {
 	static class CustomAuthorizationManagerAfterAdviceConfig {
 
 		@Bean
-		AuthorizationManagerAfterAdvice<MethodInvocation> customAfterAdvice() {
-			return new AuthorizationManagerAfterAdvice<MethodInvocation>() {
+		AuthorizationMethodBeforeAdvice<MethodInvocation> customBeforeAdvice() {
+			JdkRegexpMethodPointcut methodMatcher = new JdkRegexpMethodPointcut();
+			methodMatcher.setPattern(".*MethodSecurityServiceImpl.*securedUser");
+			AuthorizationManager<MethodInvocation> authorizationManager = (authentication, mi) ->
+					new AuthorizationDecision("bob".equals(authentication.get().getName()));
+			return new AuthorizationManagerMethodBeforeAdvice<>(methodMatcher, authorizationManager);
+		}
+
+		@Bean
+		AuthorizationMethodAfterAdvice<MethodInvocation> customAfterAdvice() {
+			JdkRegexpMethodPointcut methodMatcher = new JdkRegexpMethodPointcut();
+			methodMatcher.setPattern("MethodSecurityServiceImpl.securedUser");
+			return new AuthorizationMethodAfterAdvice<MethodInvocation>() {
 				@Override
 				public MethodMatcher getMethodMatcher() {
-					return new StaticMethodMatcher() {
-						@Override
-						public boolean matches(Method method, Class<?> targetClass) {
-							return "securedUser".equals(method.getName())
-									&& MethodSecurityServiceImpl.class == targetClass;
-						}
-					};
+					return methodMatcher;
 				}
 
 				@Override
-				public Object check(Supplier<Authentication> authentication, MethodInvocation methodInvocation,
+				public Object after(Supplier<Authentication> authentication, MethodInvocation methodInvocation,
 						Object returnedObject) {
-					Authentication auth = authentication.get();
-					if ("bob".equals(auth.getName())) {
-						return "granted";
-					}
-					throw new AccessDeniedException("Access Denied for User '" + auth.getName() + "'");
+					return "granted";
 				}
 			};
 		}

@@ -34,7 +34,7 @@ import org.springframework.expression.Expression;
 import org.springframework.expression.ExpressionParser;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.expression.ExpressionUtils;
-import org.springframework.security.access.method.AuthorizationManagerAfterAdvice;
+import org.springframework.security.access.method.AuthorizationMethodAfterAdvice;
 import org.springframework.security.access.method.MethodAuthorizationContext;
 import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.security.access.prepost.PostFilter;
@@ -43,15 +43,15 @@ import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 /**
- * An {@link AuthorizationManagerAfterAdvice} which can determine if an
+ * An {@link AuthorizationMethodAfterAdvice} which can determine if an
  * {@link Authentication} has access to the returned object from the
  * {@link MethodInvocation} by evaluating expressions from the {@link PostFilter} and the
  * {@link PostAuthorize} annotations.
  *
  * @author Evgeniy Cheban
  */
-public final class PostAnnotationAuthorizationManagerAfterAdvice
-		implements AuthorizationManagerAfterAdvice<MethodAuthorizationContext> {
+public final class PostAnnotationAuthorizationMethodAfterAdvice
+		implements AuthorizationMethodAfterAdvice<MethodAuthorizationContext> {
 
 	private static final AuthorizationAttribute NULL_ATTRIBUTE = new AuthorizationAttribute(null, null);
 
@@ -92,7 +92,7 @@ public final class PostAnnotationAuthorizationManagerAfterAdvice
 	 * @throws AccessDeniedException if access is not granted
 	 */
 	@Override
-	public Object check(Supplier<Authentication> authentication, MethodAuthorizationContext methodAuthorizationContext,
+	public Object after(Supplier<Authentication> authentication, MethodAuthorizationContext methodAuthorizationContext,
 			Object returnedObject) {
 		MethodInvocation methodInvocation = methodAuthorizationContext.getMethodInvocation();
 		Method method = methodInvocation.getMethod();

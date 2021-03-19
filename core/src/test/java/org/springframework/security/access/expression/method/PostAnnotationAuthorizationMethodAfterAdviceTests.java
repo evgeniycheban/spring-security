@@ -36,37 +36,37 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 /**
- * Tests for {@link PostAnnotationAuthorizationManagerAfterAdvice}.
+ * Tests for {@link PostAnnotationAuthorizationMethodAfterAdvice}.
  *
  * @author Evgeniy Cheban
  */
-public class PostAnnotationAuthorizationManagerAfterAdviceTests {
+public class PostAnnotationAuthorizationMethodAfterAdviceTests {
 
 	@Test
 	public void setExpressionHandlerWhenNotNullThenSetsExpressionHandler() {
 		MethodSecurityExpressionHandler expressionHandler = new DefaultMethodSecurityExpressionHandler();
-		PostAnnotationAuthorizationManagerAfterAdvice advice = new PostAnnotationAuthorizationManagerAfterAdvice();
+		PostAnnotationAuthorizationMethodAfterAdvice advice = new PostAnnotationAuthorizationMethodAfterAdvice();
 		advice.setExpressionHandler(expressionHandler);
 		assertThat(advice).extracting("expressionHandler").isEqualTo(expressionHandler);
 	}
 
 	@Test
 	public void setExpressionHandlerWhenNullThenException() {
-		PostAnnotationAuthorizationManagerAfterAdvice advice = new PostAnnotationAuthorizationManagerAfterAdvice();
+		PostAnnotationAuthorizationMethodAfterAdvice advice = new PostAnnotationAuthorizationMethodAfterAdvice();
 		assertThatIllegalArgumentException().isThrownBy(() -> advice.setExpressionHandler(null))
 				.withMessage("expressionHandler cannot be null");
 	}
 
 	@Test
 	public void methodMatcherWhenMethodHasNotPostAnnotationsThenNotMatches() throws Exception {
-		PostAnnotationAuthorizationManagerAfterAdvice advice = new PostAnnotationAuthorizationManagerAfterAdvice();
+		PostAnnotationAuthorizationMethodAfterAdvice advice = new PostAnnotationAuthorizationMethodAfterAdvice();
 		MethodMatcher methodMatcher = advice.getMethodMatcher();
 		assertThat(methodMatcher.matches(TestClass.class.getMethod("doSomething"), TestClass.class)).isFalse();
 	}
 
 	@Test
 	public void methodMatcherWhenMethodHasPostFilterAnnotationThenMatches() throws Exception {
-		PostAnnotationAuthorizationManagerAfterAdvice advice = new PostAnnotationAuthorizationManagerAfterAdvice();
+		PostAnnotationAuthorizationMethodAfterAdvice advice = new PostAnnotationAuthorizationMethodAfterAdvice();
 		MethodMatcher methodMatcher = advice.getMethodMatcher();
 		assertThat(methodMatcher.matches(TestClass.class.getMethod("doSomethingList", List.class), TestClass.class))
 				.isTrue();
@@ -74,7 +74,7 @@ public class PostAnnotationAuthorizationManagerAfterAdviceTests {
 
 	@Test
 	public void methodMatcherWhenMethodHasPostAuthorizeAnnotationThenMatches() throws Exception {
-		PostAnnotationAuthorizationManagerAfterAdvice advice = new PostAnnotationAuthorizationManagerAfterAdvice();
+		PostAnnotationAuthorizationMethodAfterAdvice advice = new PostAnnotationAuthorizationMethodAfterAdvice();
 		MethodMatcher methodMatcher = advice.getMethodMatcher();
 		assertThat(methodMatcher.matches(TestClass.class.getMethod("doSomethingString", String.class), TestClass.class))
 				.isTrue();
@@ -90,8 +90,8 @@ public class PostAnnotationAuthorizationManagerAfterAdviceTests {
 				"doSomethingList", new Class[] { List.class }, new Object[] { list });
 		MethodAuthorizationContext methodAuthorizationContext = new MethodAuthorizationContext(mockMethodInvocation,
 				TestClass.class);
-		PostAnnotationAuthorizationManagerAfterAdvice advice = new PostAnnotationAuthorizationManagerAfterAdvice();
-		List<String> result = (List<String>) advice.check(authentication, methodAuthorizationContext, list);
+		PostAnnotationAuthorizationMethodAfterAdvice advice = new PostAnnotationAuthorizationMethodAfterAdvice();
+		List<String> result = (List<String>) advice.after(authentication, methodAuthorizationContext, list);
 		assertThat(result).hasSize(1);
 		assertThat(list.get(0)).isEqualTo("john");
 	}
@@ -103,8 +103,8 @@ public class PostAnnotationAuthorizationManagerAfterAdviceTests {
 				"doSomethingString", new Class[] { String.class }, new Object[] { "grant" });
 		MethodAuthorizationContext methodAuthorizationContext = new MethodAuthorizationContext(mockMethodInvocation,
 				TestClass.class);
-		PostAnnotationAuthorizationManagerAfterAdvice advice = new PostAnnotationAuthorizationManagerAfterAdvice();
-		Object grant = advice.check(authentication, methodAuthorizationContext, "grant");
+		PostAnnotationAuthorizationMethodAfterAdvice advice = new PostAnnotationAuthorizationMethodAfterAdvice();
+		Object grant = advice.after(authentication, methodAuthorizationContext, "grant");
 		assertThat(grant).isEqualTo("grant");
 	}
 
@@ -115,9 +115,9 @@ public class PostAnnotationAuthorizationManagerAfterAdviceTests {
 				"doSomethingString", new Class[] { String.class }, new Object[] { "deny" });
 		MethodAuthorizationContext methodAuthorizationContext = new MethodAuthorizationContext(mockMethodInvocation,
 				TestClass.class);
-		PostAnnotationAuthorizationManagerAfterAdvice advice = new PostAnnotationAuthorizationManagerAfterAdvice();
+		PostAnnotationAuthorizationMethodAfterAdvice advice = new PostAnnotationAuthorizationMethodAfterAdvice();
 		assertThatExceptionOfType(AccessDeniedException.class)
-				.isThrownBy(() -> advice.check(authentication, methodAuthorizationContext, "deny"))
+				.isThrownBy(() -> advice.after(authentication, methodAuthorizationContext, "deny"))
 				.withMessage("Access Denied");
 	}
 
@@ -131,8 +131,8 @@ public class PostAnnotationAuthorizationManagerAfterAdviceTests {
 				"doSomethingPostFilterPostAuthorizeList", new Class[] { List.class }, new Object[] { list });
 		MethodAuthorizationContext methodAuthorizationContext = new MethodAuthorizationContext(mockMethodInvocation,
 				TestClass.class);
-		PostAnnotationAuthorizationManagerAfterAdvice advice = new PostAnnotationAuthorizationManagerAfterAdvice();
-		List<String> result = (List<String>) advice.check(authentication, methodAuthorizationContext, list);
+		PostAnnotationAuthorizationMethodAfterAdvice advice = new PostAnnotationAuthorizationMethodAfterAdvice();
+		List<String> result = (List<String>) advice.after(authentication, methodAuthorizationContext, list);
 		assertThat(result).hasSize(1);
 		assertThat(result.get(0)).isEqualTo("grant");
 	}
@@ -146,9 +146,9 @@ public class PostAnnotationAuthorizationManagerAfterAdviceTests {
 				"doSomethingPostFilterPostAuthorizeList", new Class[] { List.class }, new Object[] { list });
 		MethodAuthorizationContext methodAuthorizationContext = new MethodAuthorizationContext(mockMethodInvocation,
 				TestClass.class);
-		PostAnnotationAuthorizationManagerAfterAdvice advice = new PostAnnotationAuthorizationManagerAfterAdvice();
+		PostAnnotationAuthorizationMethodAfterAdvice advice = new PostAnnotationAuthorizationMethodAfterAdvice();
 		assertThatExceptionOfType(AccessDeniedException.class)
-				.isThrownBy(() -> advice.check(authentication, methodAuthorizationContext, list))
+				.isThrownBy(() -> advice.after(authentication, methodAuthorizationContext, list))
 				.withMessage("Access Denied");
 		assertThat(list).isEmpty();
 	}

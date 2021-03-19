@@ -28,26 +28,25 @@ import org.springframework.aop.MethodMatcher;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.aop.support.StaticMethodMatcher;
 import org.springframework.core.log.LogMessage;
-import org.springframework.security.authorization.AuthorizationDecision;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 
 /**
- * An {@link AuthorizationManagerBeforeAdvice} which delegates to a specific
- * {@link AuthorizationManagerBeforeAdvice} and returns the first granted
- * {@link AuthorizationDecision} and the denied {@link AuthorizationDecision} only if one
- * of the {@link AuthorizationManagerAfterAdvice}s denied.
+ * An {@link AuthorizationMethodAfterAdvice} which delegates to specific
+ * {@link AuthorizationMethodAfterAdvice}s and returns the result (possibly modified)
+ * from the {@link MethodInvocation}.
  *
  * @author Evgeniy Cheban
  */
-public final class DelegatingAuthorizationManagerBeforeAdvice
-		implements AuthorizationManagerBeforeAdvice<MethodInvocation> {
+public final class DelegatingAuthorizationMethodAfterAdvice
+		implements AuthorizationMethodAfterAdvice<MethodInvocation> {
 
 	private final Log logger = LogFactory.getLog(getClass());
 
 	private final MethodMatcher methodMatcher = new StaticMethodMatcher() {
 		@Override
 		public boolean matches(Method method, Class<?> targetClass) {
-			for (AuthorizationManagerBeforeAdvice<MethodAuthorizationContext> delegate : DelegatingAuthorizationManagerBeforeAdvice.this.delegates) {
+			for (AuthorizationMethodAfterAdvice<MethodAuthorizationContext> delegate : DelegatingAuthorizationMethodAfterAdvice.this.delegates) {
 				MethodMatcher methodMatcher = delegate.getMethodMatcher();
 				if (methodMatcher.matches(method, targetClass)) {
 					return true;
@@ -57,14 +56,14 @@ public final class DelegatingAuthorizationManagerBeforeAdvice
 		}
 	};
 
-	private final List<AuthorizationManagerBeforeAdvice<MethodAuthorizationContext>> delegates;
+	private final List<AuthorizationMethodAfterAdvice<MethodAuthorizationContext>> delegates;
 
 	/**
 	 * Creates an instance.
-	 * @param delegates the {@link AuthorizationManagerBeforeAdvice}s to use
+	 * @param delegates the {@link AuthorizationMethodAfterAdvice}s to use
 	 */
-	public DelegatingAuthorizationManagerBeforeAdvice(
-			List<AuthorizationManagerBeforeAdvice<MethodAuthorizationContext>> delegates) {
+	public DelegatingAuthorizationMethodAfterAdvice(
+			List<AuthorizationMethodAfterAdvice<MethodAuthorizationContext>> delegates) {
 		this.delegates = delegates;
 	}
 
@@ -74,44 +73,34 @@ public final class DelegatingAuthorizationManagerBeforeAdvice
 	}
 
 	/**
-	 * Delegates to a specific {@link AuthorizationManagerBeforeAdvice} and returns the
-	 * first granted {@link AuthorizationDecision} and the denied
-	 * {@link AuthorizationDecision} only if one of the
-	 * {@link AuthorizationManagerAfterAdvice}s denied.
+	 * Delegates to specific {@link AuthorizationMethodAfterAdvice}s and returns the
+	 * <code>returnedObject</code> (possibly modified) from the method argument.
 	 * @param authentication the {@link Supplier} of the {@link Authentication} to check
 	 * @param mi the {@link MethodInvocation} to check
-	 * @return an {@link AuthorizationDecision} or null if no
-	 * {@link AuthorizationManagerBeforeAdvice}s could decide
+	 * @param returnedObject the returned object from the {@link MethodInvocation} to
+	 * check
+	 * @return the <code>returnedObject</code> (possibly modified) from the method
+	 * argument
+	 * @throws AccessDeniedException if access is not granted by one of the
+	 * {@link AuthorizationMethodAfterAdvice}s
 	 */
 	@Override
-	public AuthorizationDecision check(Supplier<Authentication> authentication, MethodInvocation mi) {
+	public Object after(Supplier<Authentication> authentication, MethodInvocation mi, Object returnedObject) {
 		if (this.logger.isTraceEnabled()) {
-			this.logger.trace(LogMessage.format("Pre Authorizing %s", mi));
+			this.logger.trace(LogMessage.format("Post Authorizing %s from %s", returnedObject, mi));
 		}
 		Object target = mi.getThis();
 		Class<?> targetClass = (target != null) ? AopUtils.getTargetClass(target) : null;
 		MethodAuthorizationContext methodAuthorizationCtx = new MethodAuthorizationContext(mi, targetClass);
-		AuthorizationDecision deniedDecision = null;
-		for (AuthorizationManagerBeforeAdvice<MethodAuthorizationContext> delegate : this.delegates) {
+		Object result = returnedObject;
+		for (AuthorizationMethodAfterAdvice<MethodAuthorizationContext> delegate : this.delegates) {
 			if (this.logger.isTraceEnabled()) {
-				this.logger.trace(LogMessage.format("Checking authorization on %s using %s", mi, delegate));
+				this.logger.trace(
+						LogMessage.format("Checking authorization on %s from %s using %s", result, mi, delegate));
 			}
-			AuthorizationDecision decision = delegate.check(authentication, methodAuthorizationCtx);
-			if (decision == null) {
-				continue;
-			}
-			if (decision.isGranted()) {
-				return decision;
-			}
-			if (deniedDecision == null) {
-				deniedDecision = decision;
-			}
+			result = delegate.after(authentication, methodAuthorizationCtx, result);
 		}
-		if (deniedDecision != null) {
-			return deniedDecision;
-		}
-		this.logger.trace("Abstaining since did not find matching AuthorizationManagerBeforeAdvice");
-		return null;
+		return result;
 	}
 
 }
