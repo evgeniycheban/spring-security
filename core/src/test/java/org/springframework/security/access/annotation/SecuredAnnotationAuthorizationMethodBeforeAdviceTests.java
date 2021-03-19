@@ -21,6 +21,7 @@ import java.util.function.Supplier;
 import org.junit.Test;
 
 import org.springframework.aop.MethodMatcher;
+import org.springframework.aop.support.annotation.AnnotationMethodMatcher;
 import org.springframework.security.access.intercept.method.MockMethodInvocation;
 import org.springframework.security.access.method.MethodAuthorizationContext;
 import org.springframework.security.authentication.TestingAuthenticationToken;
@@ -30,23 +31,23 @@ import org.springframework.security.core.Authentication;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link SecuredAnnotationAuthorizationManagerBeforeAdvice}.
+ * Tests for {@link SecuredAuthorizationManager}.
  *
  * @author Evgeniy Cheban
  */
-public class SecuredAnnotationAuthorizationManagerBeforeAdviceTests {
+public class SecuredAnnotationAuthorizationMethodBeforeAdviceTests {
 
 	@Test
 	public void methodMatcherWhenMethodHasNotSecuredAnnotationThenNotMatches() throws Exception {
-		SecuredAnnotationAuthorizationManagerBeforeAdvice advice = new SecuredAnnotationAuthorizationManagerBeforeAdvice();
-		MethodMatcher methodMatcher = advice.getMethodMatcher();
+		SecuredAuthorizationManager advice = new SecuredAuthorizationManager();
+		MethodMatcher methodMatcher = new AnnotationMethodMatcher(Secured.class, true);
 		assertThat(methodMatcher.matches(TestClass.class.getMethod("doSomething"), TestClass.class)).isFalse();
 	}
 
 	@Test
 	public void methodMatcherWhenMethodHasSecuredAnnotationThenMatches() throws Exception {
-		SecuredAnnotationAuthorizationManagerBeforeAdvice advice = new SecuredAnnotationAuthorizationManagerBeforeAdvice();
-		MethodMatcher methodMatcher = advice.getMethodMatcher();
+		SecuredAuthorizationManager advice = new SecuredAuthorizationManager();
+		MethodMatcher methodMatcher = new AnnotationMethodMatcher(Secured.class, true);
 		assertThat(methodMatcher.matches(TestClass.class.getMethod("securedUserOrAdmin"), TestClass.class)).isTrue();
 	}
 
@@ -57,7 +58,7 @@ public class SecuredAnnotationAuthorizationManagerBeforeAdviceTests {
 				"securedUserOrAdmin");
 		MethodAuthorizationContext methodAuthorizationContext = new MethodAuthorizationContext(methodInvocation,
 				TestClass.class);
-		SecuredAnnotationAuthorizationManagerBeforeAdvice advice = new SecuredAnnotationAuthorizationManagerBeforeAdvice();
+		SecuredAuthorizationManager advice = new SecuredAuthorizationManager();
 		AuthorizationDecision decision = advice.check(authentication, methodAuthorizationContext);
 		assertThat(decision).isNotNull();
 		assertThat(decision.isGranted()).isTrue();
@@ -71,7 +72,7 @@ public class SecuredAnnotationAuthorizationManagerBeforeAdviceTests {
 				"securedUserOrAdmin");
 		MethodAuthorizationContext methodAuthorizationContext = new MethodAuthorizationContext(methodInvocation,
 				TestClass.class);
-		SecuredAnnotationAuthorizationManagerBeforeAdvice advice = new SecuredAnnotationAuthorizationManagerBeforeAdvice();
+		SecuredAuthorizationManager advice = new SecuredAuthorizationManager();
 		AuthorizationDecision decision = advice.check(authentication, methodAuthorizationContext);
 		assertThat(decision).isNotNull();
 		assertThat(decision.isGranted()).isTrue();
@@ -85,7 +86,7 @@ public class SecuredAnnotationAuthorizationManagerBeforeAdviceTests {
 				"securedUserOrAdmin");
 		MethodAuthorizationContext methodAuthorizationContext = new MethodAuthorizationContext(methodInvocation,
 				TestClass.class);
-		SecuredAnnotationAuthorizationManagerBeforeAdvice advice = new SecuredAnnotationAuthorizationManagerBeforeAdvice();
+		SecuredAuthorizationManager advice = new SecuredAuthorizationManager();
 		AuthorizationDecision decision = advice.check(authentication, methodAuthorizationContext);
 		assertThat(decision).isNotNull();
 		assertThat(decision.isGranted()).isFalse();

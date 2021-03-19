@@ -33,8 +33,7 @@ import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.Expression;
 import org.springframework.expression.ExpressionParser;
-import org.springframework.security.access.expression.ExpressionUtils;
-import org.springframework.security.access.method.AuthorizationManagerBeforeAdvice;
+import org.springframework.security.access.method.AuthorizationMethodBeforeAdvice;
 import org.springframework.security.access.method.MethodAuthorizationContext;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.access.prepost.PreFilter;
@@ -44,16 +43,16 @@ import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 /**
- * An {@link AuthorizationManagerBeforeAdvice} which can determine if an
+ * An {@link AuthorizationMethodBeforeAdvice} which can determine if an
  * {@link Authentication} has access to the {@link MethodInvocation} by evaluating
  * expressions from the {@link PreFilter} and the {@link PreAuthorize} annotations.
  *
  * @author Evgeniy Cheban
  */
-public final class PreAnnotationAuthorizationManagerBeforeAdvice
-		implements AuthorizationManagerBeforeAdvice<MethodAuthorizationContext> {
+public final class PreFilterAuthorizationMethodBeforeAdvice
+		implements AuthorizationMethodBeforeAdvice<MethodAuthorizationContext> {
 
-	private static final AuthorizationAttribute NULL_ATTRIBUTE = new AuthorizationAttribute(null, null, null);
+	private static final AuthorizationAttribute NULL_ATTRIBUTE = new AuthorizationAttribute(null, null);
 
 	private final MethodMatcher methodMatcher = new StaticMethodMatcher() {
 		@Override
@@ -90,23 +89,20 @@ public final class PreAnnotationAuthorizationManagerBeforeAdvice
 	 * {@link PreAuthorize} annotations are not present
 	 */
 	@Override
-	public AuthorizationDecision check(Supplier<Authentication> authentication,
+	public void before(Supplier<Authentication> authentication,
 			MethodAuthorizationContext methodAuthorizationContext) {
 		MethodInvocation methodInvocation = methodAuthorizationContext.getMethodInvocation();
 		Method method = methodInvocation.getMethod();
 		Class<?> targetClass = methodAuthorizationContext.getTargetClass();
 		AuthorizationAttribute attribute = resolveAttribute(method, targetClass);
 		if (attribute == NULL_ATTRIBUTE) {
-			return null;
+			return;
 		}
 		EvaluationContext ctx = this.expressionHandler.createEvaluationContext(authentication.get(), methodInvocation);
 		if (attribute.preFilter != null) {
 			Object filterTarget = findFilterTarget(attribute.filterTarget, ctx, methodInvocation);
 			this.expressionHandler.filter(filterTarget, attribute.preFilter, ctx);
 		}
-		boolean granted = attribute.preAuthorize == null
-				|| ExpressionUtils.evaluateAsBoolean(attribute.preAuthorize, ctx);
-		return new AuthorizationDecision(granted);
 	}
 
 	private AuthorizationAttribute resolveAttribute(Method method, Class<?> targetClass) {
@@ -129,9 +125,7 @@ public final class PreAnnotationAuthorizationManagerBeforeAdvice
 			preFilterExpression = (StringUtils.hasText(preFilter.value()))
 					? expressionParser.parseExpression(preFilter.value()) : null;
 		}
-		Expression preAuthorizeExpression = (preAuthorize != null && StringUtils.hasText(preAuthorize.value()))
-				? expressionParser.parseExpression(preAuthorize.value()) : null;
-		return new AuthorizationAttribute(filterTarget, preFilterExpression, preAuthorizeExpression);
+		return new AuthorizationAttribute(filterTarget, preFilterExpression);
 	}
 
 	private <A extends Annotation> A findAnnotation(Method method, Class<A> annotationClass) {
@@ -169,12 +163,9 @@ public final class PreAnnotationAuthorizationManagerBeforeAdvice
 
 		private final Expression preFilter;
 
-		private final Expression preAuthorize;
-
-		private AuthorizationAttribute(String filterTarget, Expression preFilter, Expression preAuthorize) {
+		private AuthorizationAttribute(String filterTarget, Expression preFilter) {
 			this.filterTarget = filterTarget;
 			this.preFilter = preFilter;
-			this.preAuthorize = preAuthorize;
 		}
 
 	}

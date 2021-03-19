@@ -21,6 +21,8 @@ import java.util.List;
 
 import org.aopalliance.intercept.MethodInvocation;
 
+import org.springframework.aop.MethodMatcher;
+import org.springframework.aop.support.annotation.AnnotationMethodMatcher;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.context.annotation.Bean;
@@ -28,18 +30,22 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.ImportAware;
 import org.springframework.context.annotation.Role;
 import org.springframework.core.type.AnnotationMetadata;
-import org.springframework.security.access.annotation.SecuredAnnotationAuthorizationManagerBeforeAdvice;
+import org.springframework.security.access.annotation.Secured;
+import org.springframework.security.access.annotation.SecuredAuthorizationManager;
 import org.springframework.security.access.expression.method.DefaultMethodSecurityExpressionHandler;
 import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler;
-import org.springframework.security.access.expression.method.PostAnnotationAuthorizationManagerAfterAdvice;
-import org.springframework.security.access.expression.method.PreAnnotationAuthorizationManagerBeforeAdvice;
+import org.springframework.security.access.expression.method.PostAnnotationAuthorizationMethodAfterAdvice;
+import org.springframework.security.access.expression.method.PreAuthorizeAuthorizationManager;
+import org.springframework.security.access.expression.method.PreFilterAuthorizationMethodBeforeAdvice;
 import org.springframework.security.access.intercept.aopalliance.AuthorizationMethodInterceptor;
 import org.springframework.security.access.intercept.aopalliance.MethodSecurityAuthorizationManagerAdvisor;
-import org.springframework.security.access.method.AuthorizationManagerAfterAdvice;
-import org.springframework.security.access.method.AuthorizationManagerBeforeAdvice;
-import org.springframework.security.access.method.DelegatingAuthorizationManagerAfterAdvice;
-import org.springframework.security.access.method.DelegatingAuthorizationManagerBeforeAdvice;
+import org.springframework.security.access.method.AuthorizationManagerMethodBeforeAdvice;
+import org.springframework.security.access.method.AuthorizationMethodAfterAdvice;
+import org.springframework.security.access.method.AuthorizationMethodBeforeAdvice;
+import org.springframework.security.access.method.DelegatingAuthorizationMethodAfterAdvice;
+import org.springframework.security.access.method.DelegatingAuthorizationMethodBeforeAdvice;
 import org.springframework.security.access.method.MethodAuthorizationContext;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * Base {@link Configuration} for enabling Spring Security Method Security.
@@ -53,9 +59,9 @@ final class MethodSecurityConfiguration implements ImportAware {
 
 	private MethodSecurityExpressionHandler methodSecurityExpressionHandler;
 
-	private AuthorizationManagerBeforeAdvice<MethodInvocation> authorizationManagerBeforeAdvice;
+	private AuthorizationMethodBeforeAdvice<MethodInvocation> authorizationMethodBeforeAdvice;
 
-	private AuthorizationManagerAfterAdvice<MethodInvocation> authorizationManagerAfterAdvice;
+	private AuthorizationMethodAfterAdvice<MethodInvocation> authorizationMethodAfterAdvice;
 
 	private int advisorOrder;
 
@@ -87,55 +93,68 @@ final class MethodSecurityConfiguration implements ImportAware {
 		this.methodSecurityExpressionHandler = methodSecurityExpressionHandler;
 	}
 
-	private AuthorizationManagerBeforeAdvice<MethodInvocation> getAuthorizationManagerBeforeAdvice() {
-		if (this.authorizationManagerBeforeAdvice == null) {
-			this.authorizationManagerBeforeAdvice = createDefaultAuthorizationManagerBeforeAdvice();
+	private AuthorizationMethodBeforeAdvice<MethodInvocation> getAuthorizationManagerBeforeAdvice() {
+		if (this.authorizationMethodBeforeAdvice == null) {
+			this.authorizationMethodBeforeAdvice = createDefaultAuthorizationManagerBeforeAdvice();
 		}
-		return this.authorizationManagerBeforeAdvice;
+		return this.authorizationMethodBeforeAdvice;
 	}
 
-	private AuthorizationManagerBeforeAdvice<MethodInvocation> createDefaultAuthorizationManagerBeforeAdvice() {
-		List<AuthorizationManagerBeforeAdvice<MethodAuthorizationContext>> beforeAdvices = new ArrayList<>();
-		beforeAdvices.add(getPreAnnotationAuthorizationManagerBeforeAdvice());
-		beforeAdvices.add(new SecuredAnnotationAuthorizationManagerBeforeAdvice());
-		return new DelegatingAuthorizationManagerBeforeAdvice(beforeAdvices);
+	private AuthorizationMethodBeforeAdvice<MethodInvocation> createDefaultAuthorizationManagerBeforeAdvice() {
+		List<AuthorizationMethodBeforeAdvice<MethodAuthorizationContext>> beforeAdvices = new ArrayList<>();
+		beforeAdvices.add(getPreFilterAuthorizationManagerBeforeAdvice());
+		beforeAdvices.add(getPreAuthorizeAuthorizationManagerBeforeAdvice());
+		beforeAdvices.add(getSecuredAuthorizationManagerBeforeAdvice());
+		return new DelegatingAuthorizationMethodBeforeAdvice(beforeAdvices);
 	}
 
-	private PreAnnotationAuthorizationManagerBeforeAdvice getPreAnnotationAuthorizationManagerBeforeAdvice() {
-		PreAnnotationAuthorizationManagerBeforeAdvice preAnnotationBeforeAdvice = new PreAnnotationAuthorizationManagerBeforeAdvice();
-		preAnnotationBeforeAdvice.setExpressionHandler(getMethodSecurityExpressionHandler());
-		return preAnnotationBeforeAdvice;
+	private AuthorizationMethodBeforeAdvice<MethodAuthorizationContext> getPreFilterAuthorizationManagerBeforeAdvice() {
+		PreFilterAuthorizationMethodBeforeAdvice advice = new PreFilterAuthorizationMethodBeforeAdvice();
+		advice.setExpressionHandler(getMethodSecurityExpressionHandler());
+		return advice;
+	}
+
+	private AuthorizationMethodBeforeAdvice<MethodAuthorizationContext> getPreAuthorizeAuthorizationManagerBeforeAdvice() {
+		MethodMatcher methodMatcher = new AnnotationMethodMatcher(PreAuthorize.class, true);
+		PreAuthorizeAuthorizationManager authorizationManager = new PreAuthorizeAuthorizationManager();
+		authorizationManager.setExpressionHandler(getMethodSecurityExpressionHandler());
+		return new AuthorizationManagerMethodBeforeAdvice<>(methodMatcher, authorizationManager);
+	}
+
+	private AuthorizationMethodBeforeAdvice<MethodAuthorizationContext> getSecuredAuthorizationManagerBeforeAdvice() {
+		MethodMatcher methodMatcher = new AnnotationMethodMatcher(Secured.class, true);
+		return new AuthorizationManagerMethodBeforeAdvice<>(methodMatcher, new SecuredAuthorizationManager());
 	}
 
 	@Autowired(required = false)
 	void setAuthorizationManagerBeforeAdvice(
-			AuthorizationManagerBeforeAdvice<MethodInvocation> authorizationManagerBeforeAdvice) {
-		this.authorizationManagerBeforeAdvice = authorizationManagerBeforeAdvice;
+			AuthorizationMethodBeforeAdvice<MethodInvocation> authorizationMethodBeforeAdvice) {
+		this.authorizationMethodBeforeAdvice = authorizationMethodBeforeAdvice;
 	}
 
-	private AuthorizationManagerAfterAdvice<MethodInvocation> getAuthorizationManagerAfterAdvice() {
-		if (this.authorizationManagerAfterAdvice == null) {
-			this.authorizationManagerAfterAdvice = createDefaultAuthorizationManagerAfterAdvice();
+	private AuthorizationMethodAfterAdvice<MethodInvocation> getAuthorizationManagerAfterAdvice() {
+		if (this.authorizationMethodAfterAdvice == null) {
+			this.authorizationMethodAfterAdvice = createDefaultAuthorizationManagerAfterAdvice();
 		}
-		return this.authorizationManagerAfterAdvice;
+		return this.authorizationMethodAfterAdvice;
 	}
 
-	private AuthorizationManagerAfterAdvice<MethodInvocation> createDefaultAuthorizationManagerAfterAdvice() {
-		List<AuthorizationManagerAfterAdvice<MethodAuthorizationContext>> afterAdvices = new ArrayList<>();
+	private AuthorizationMethodAfterAdvice<MethodInvocation> createDefaultAuthorizationManagerAfterAdvice() {
+		List<AuthorizationMethodAfterAdvice<MethodAuthorizationContext>> afterAdvices = new ArrayList<>();
 		afterAdvices.add(getPostAnnotationAuthorizationManagerAfterAdvice());
-		return new DelegatingAuthorizationManagerAfterAdvice(afterAdvices);
+		return new DelegatingAuthorizationMethodAfterAdvice(afterAdvices);
 	}
 
-	private PostAnnotationAuthorizationManagerAfterAdvice getPostAnnotationAuthorizationManagerAfterAdvice() {
-		PostAnnotationAuthorizationManagerAfterAdvice postAnnotationAfterAdvice = new PostAnnotationAuthorizationManagerAfterAdvice();
+	private PostAnnotationAuthorizationMethodAfterAdvice getPostAnnotationAuthorizationManagerAfterAdvice() {
+		PostAnnotationAuthorizationMethodAfterAdvice postAnnotationAfterAdvice = new PostAnnotationAuthorizationMethodAfterAdvice();
 		postAnnotationAfterAdvice.setExpressionHandler(getMethodSecurityExpressionHandler());
 		return postAnnotationAfterAdvice;
 	}
 
 	@Autowired(required = false)
 	void setAuthorizationManagerAfterAdvice(
-			AuthorizationManagerAfterAdvice<MethodInvocation> authorizationManagerAfterAdvice) {
-		this.authorizationManagerAfterAdvice = authorizationManagerAfterAdvice;
+			AuthorizationMethodAfterAdvice<MethodInvocation> authorizationMethodAfterAdvice) {
+		this.authorizationMethodAfterAdvice = authorizationMethodAfterAdvice;
 	}
 
 	@Override

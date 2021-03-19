@@ -32,18 +32,18 @@ import org.springframework.security.core.Authentication;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link DelegatingAuthorizationManagerAfterAdvice}.
+ * Tests for {@link DelegatingAuthorizationMethodAfterAdvice}.
  *
  * @author Evgeniy Cheban
  */
-public class DelegatingAuthorizationManagerAfterAdviceTests {
+public class DelegatingAuthorizationMethodAfterAdviceTests {
 
 	@Test
 	public void methodMatcherWhenNoneMatchesThenNotMatches() throws Exception {
-		List<AuthorizationManagerAfterAdvice<MethodAuthorizationContext>> delegates = new ArrayList<>();
-		delegates.add(new AuthorizationManagerAfterAdvice<MethodAuthorizationContext>() {
+		List<AuthorizationMethodAfterAdvice<MethodAuthorizationContext>> delegates = new ArrayList<>();
+		delegates.add(new AuthorizationMethodAfterAdvice<MethodAuthorizationContext>() {
 			@Override
-			public Object check(Supplier<Authentication> authentication, MethodAuthorizationContext object,
+			public Object after(Supplier<Authentication> authentication, MethodAuthorizationContext object,
 					Object returnedObject) {
 				return returnedObject;
 			}
@@ -58,9 +58,9 @@ public class DelegatingAuthorizationManagerAfterAdviceTests {
 				};
 			}
 		});
-		delegates.add(new AuthorizationManagerAfterAdvice<MethodAuthorizationContext>() {
+		delegates.add(new AuthorizationMethodAfterAdvice<MethodAuthorizationContext>() {
 			@Override
-			public Object check(Supplier<Authentication> authentication, MethodAuthorizationContext object,
+			public Object after(Supplier<Authentication> authentication, MethodAuthorizationContext object,
 					Object returnedObject) {
 				return returnedObject;
 			}
@@ -75,17 +75,17 @@ public class DelegatingAuthorizationManagerAfterAdviceTests {
 				};
 			}
 		});
-		DelegatingAuthorizationManagerAfterAdvice advice = new DelegatingAuthorizationManagerAfterAdvice(delegates);
+		DelegatingAuthorizationMethodAfterAdvice advice = new DelegatingAuthorizationMethodAfterAdvice(delegates);
 		MethodMatcher methodMatcher = advice.getMethodMatcher();
 		assertThat(methodMatcher.matches(TestClass.class.getMethod("doSomething"), TestClass.class)).isFalse();
 	}
 
 	@Test
 	public void methodMatcherWhenAnyMatchesThenMatches() throws Exception {
-		List<AuthorizationManagerAfterAdvice<MethodAuthorizationContext>> delegates = new ArrayList<>();
-		delegates.add(new AuthorizationManagerAfterAdvice<MethodAuthorizationContext>() {
+		List<AuthorizationMethodAfterAdvice<MethodAuthorizationContext>> delegates = new ArrayList<>();
+		delegates.add(new AuthorizationMethodAfterAdvice<MethodAuthorizationContext>() {
 			@Override
-			public Object check(Supplier<Authentication> authentication, MethodAuthorizationContext object,
+			public Object after(Supplier<Authentication> authentication, MethodAuthorizationContext object,
 					Object returnedObject) {
 				return returnedObject;
 			}
@@ -100,9 +100,9 @@ public class DelegatingAuthorizationManagerAfterAdviceTests {
 				};
 			}
 		});
-		delegates.add(new AuthorizationManagerAfterAdvice<MethodAuthorizationContext>() {
+		delegates.add(new AuthorizationMethodAfterAdvice<MethodAuthorizationContext>() {
 			@Override
-			public Object check(Supplier<Authentication> authentication, MethodAuthorizationContext object,
+			public Object after(Supplier<Authentication> authentication, MethodAuthorizationContext object,
 					Object returnedObject) {
 				return returnedObject;
 			}
@@ -112,17 +112,17 @@ public class DelegatingAuthorizationManagerAfterAdviceTests {
 				return MethodMatcher.TRUE;
 			}
 		});
-		DelegatingAuthorizationManagerAfterAdvice advice = new DelegatingAuthorizationManagerAfterAdvice(delegates);
+		DelegatingAuthorizationMethodAfterAdvice advice = new DelegatingAuthorizationMethodAfterAdvice(delegates);
 		MethodMatcher methodMatcher = advice.getMethodMatcher();
 		assertThat(methodMatcher.matches(TestClass.class.getMethod("doSomething"), TestClass.class)).isTrue();
 	}
 
 	@Test
 	public void checkWhenDelegatingAdviceModifiesReturnedObjectThenModifiedReturnedObject() throws Exception {
-		List<AuthorizationManagerAfterAdvice<MethodAuthorizationContext>> delegates = new ArrayList<>();
-		delegates.add(new AuthorizationManagerAfterAdvice<MethodAuthorizationContext>() {
+		List<AuthorizationMethodAfterAdvice<MethodAuthorizationContext>> delegates = new ArrayList<>();
+		delegates.add(new AuthorizationMethodAfterAdvice<MethodAuthorizationContext>() {
 			@Override
-			public Object check(Supplier<Authentication> authentication, MethodAuthorizationContext object,
+			public Object after(Supplier<Authentication> authentication, MethodAuthorizationContext object,
 					Object returnedObject) {
 				return returnedObject + "b";
 			}
@@ -132,9 +132,9 @@ public class DelegatingAuthorizationManagerAfterAdviceTests {
 				return MethodMatcher.TRUE;
 			}
 		});
-		delegates.add(new AuthorizationManagerAfterAdvice<MethodAuthorizationContext>() {
+		delegates.add(new AuthorizationMethodAfterAdvice<MethodAuthorizationContext>() {
 			@Override
-			public Object check(Supplier<Authentication> authentication, MethodAuthorizationContext object,
+			public Object after(Supplier<Authentication> authentication, MethodAuthorizationContext object,
 					Object returnedObject) {
 				return returnedObject + "c";
 			}
@@ -147,8 +147,8 @@ public class DelegatingAuthorizationManagerAfterAdviceTests {
 		Supplier<Authentication> authentication = () -> new TestingAuthenticationToken("user", "password");
 		MockMethodInvocation mockMethodInvocation = new MockMethodInvocation(new TestClass(), TestClass.class,
 				"doSomething");
-		DelegatingAuthorizationManagerAfterAdvice advice = new DelegatingAuthorizationManagerAfterAdvice(delegates);
-		Object result = advice.check(authentication, mockMethodInvocation, "a");
+		DelegatingAuthorizationMethodAfterAdvice advice = new DelegatingAuthorizationMethodAfterAdvice(delegates);
+		Object result = advice.after(authentication, mockMethodInvocation, "a");
 		assertThat(result).isEqualTo("abc");
 	}
 

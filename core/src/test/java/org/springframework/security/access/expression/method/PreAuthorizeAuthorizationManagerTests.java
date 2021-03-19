@@ -23,6 +23,7 @@ import java.util.function.Supplier;
 import org.junit.Test;
 
 import org.springframework.aop.MethodMatcher;
+import org.springframework.aop.support.annotation.AnnotationMethodMatcher;
 import org.springframework.security.access.intercept.method.MockMethodInvocation;
 import org.springframework.security.access.method.MethodAuthorizationContext;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -36,38 +37,38 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 /**
- * Tests for {@link PreAnnotationAuthorizationManagerBeforeAdvice}.
+ * Tests for {@link PreAuthorizeAuthorizationManager}.
  *
  * @author Evgeniy Cheban
  */
-public class PreAnnotationAuthorizationManagerBeforeAdviceTests {
+public class PreAuthorizeAuthorizationManagerTests {
 
 	@Test
 	public void setExpressionHandlerWhenNotNullThenSetsExpressionHandler() {
 		MethodSecurityExpressionHandler expressionHandler = new DefaultMethodSecurityExpressionHandler();
-		PreAnnotationAuthorizationManagerBeforeAdvice advice = new PreAnnotationAuthorizationManagerBeforeAdvice();
+		PreAuthorizeAuthorizationManager advice = new PreAuthorizeAuthorizationManager();
 		advice.setExpressionHandler(expressionHandler);
 		assertThat(advice).extracting("expressionHandler").isEqualTo(expressionHandler);
 	}
 
 	@Test
 	public void setExpressionHandlerWhenNullThenException() {
-		PreAnnotationAuthorizationManagerBeforeAdvice advice = new PreAnnotationAuthorizationManagerBeforeAdvice();
+		PreAuthorizeAuthorizationManager advice = new PreAuthorizeAuthorizationManager();
 		assertThatIllegalArgumentException().isThrownBy(() -> advice.setExpressionHandler(null))
 				.withMessage("expressionHandler cannot be null");
 	}
 
 	@Test
 	public void methodMatcherWhenMethodHasNotPreAnnotationsThenNotMatches() throws Exception {
-		PreAnnotationAuthorizationManagerBeforeAdvice advice = new PreAnnotationAuthorizationManagerBeforeAdvice();
-		MethodMatcher methodMatcher = advice.getMethodMatcher();
+		PreAuthorizeAuthorizationManager advice = new PreAuthorizeAuthorizationManager();
+		MethodMatcher methodMatcher = new AnnotationMethodMatcher(PreAuthorize.class, true);
 		assertThat(methodMatcher.matches(TestClass.class.getMethod("doSomething"), TestClass.class)).isFalse();
 	}
 
 	@Test
 	public void methodMatcherWhenMethodHasPreFilterAnnotationThenMatches() throws Exception {
-		PreAnnotationAuthorizationManagerBeforeAdvice advice = new PreAnnotationAuthorizationManagerBeforeAdvice();
-		MethodMatcher methodMatcher = advice.getMethodMatcher();
+		PreAuthorizeAuthorizationManager advice = new PreAuthorizeAuthorizationManager();
+		MethodMatcher methodMatcher = new AnnotationMethodMatcher(PreFilter.class, true);
 		assertThat(
 				methodMatcher.matches(TestClass.class.getMethod("doSomethingArray", String[].class), TestClass.class))
 						.isTrue();
@@ -75,8 +76,8 @@ public class PreAnnotationAuthorizationManagerBeforeAdviceTests {
 
 	@Test
 	public void methodMatcherWhenMethodHasPreAuthorizeAnnotationThenMatches() throws Exception {
-		PreAnnotationAuthorizationManagerBeforeAdvice advice = new PreAnnotationAuthorizationManagerBeforeAdvice();
-		MethodMatcher methodMatcher = advice.getMethodMatcher();
+		PreAuthorizeAuthorizationManager advice = new PreAuthorizeAuthorizationManager();
+		MethodMatcher methodMatcher = new AnnotationMethodMatcher(PreAuthorize.class, true);
 		assertThat(methodMatcher.matches(TestClass.class.getMethod("doSomethingString", String.class), TestClass.class))
 				.isTrue();
 	}
@@ -88,8 +89,8 @@ public class PreAnnotationAuthorizationManagerBeforeAdviceTests {
 				"doSomethingListFilterTargetNotMatch", new Class[] { List.class }, new Object[] { new ArrayList<>() });
 		MethodAuthorizationContext methodAuthorizationContext = new MethodAuthorizationContext(mockMethodInvocation,
 				TestClass.class);
-		PreAnnotationAuthorizationManagerBeforeAdvice advice = new PreAnnotationAuthorizationManagerBeforeAdvice();
-		assertThatIllegalArgumentException().isThrownBy(() -> advice.check(authentication, methodAuthorizationContext))
+		PreFilterAuthorizationMethodBeforeAdvice filter = new PreFilterAuthorizationMethodBeforeAdvice();
+		assertThatIllegalArgumentException().isThrownBy(() -> filter.before(authentication, methodAuthorizationContext))
 				.withMessage("Filter target was null, or no argument with name 'filterTargetNotMatch' found in method");
 	}
 
@@ -100,11 +101,10 @@ public class PreAnnotationAuthorizationManagerBeforeAdviceTests {
 				"doSomethingListFilterTargetMatch", new Class[] { List.class }, new Object[] { null });
 		MethodAuthorizationContext methodAuthorizationContext = new MethodAuthorizationContext(mockMethodInvocation,
 				TestClass.class);
-		PreAnnotationAuthorizationManagerBeforeAdvice advice = new PreAnnotationAuthorizationManagerBeforeAdvice();
-		assertThatIllegalArgumentException().isThrownBy(() -> advice.check(authentication, methodAuthorizationContext))
+		PreFilterAuthorizationMethodBeforeAdvice filter = new PreFilterAuthorizationMethodBeforeAdvice();
+		assertThatIllegalArgumentException().isThrownBy(() -> filter.before(authentication, methodAuthorizationContext))
 				.withMessage("Filter target was null, or no argument with name 'list' found in method");
 	}
-
 	@Test
 	public void findFilterTargetWhenNameProvidedAndMatchAndNotNullThenFiltersListReturningGrantedDecision()
 			throws Exception {
@@ -116,7 +116,9 @@ public class PreAnnotationAuthorizationManagerBeforeAdviceTests {
 				"doSomethingListFilterTargetMatch", new Class[] { List.class }, new Object[] { list });
 		MethodAuthorizationContext methodAuthorizationContext = new MethodAuthorizationContext(mockMethodInvocation,
 				TestClass.class);
-		PreAnnotationAuthorizationManagerBeforeAdvice advice = new PreAnnotationAuthorizationManagerBeforeAdvice();
+		PreFilterAuthorizationMethodBeforeAdvice filter = new PreFilterAuthorizationMethodBeforeAdvice();
+		filter.before(authentication, methodAuthorizationContext);
+		PreAuthorizeAuthorizationManager advice = new PreAuthorizeAuthorizationManager();
 		AuthorizationDecision decision = advice.check(authentication, methodAuthorizationContext);
 		assertThat(decision).isNotNull();
 		assertThat(decision.isGranted()).isTrue();
@@ -135,7 +137,9 @@ public class PreAnnotationAuthorizationManagerBeforeAdviceTests {
 				"doSomethingListFilterTargetNotProvided", new Class[] { List.class }, new Object[] { list });
 		MethodAuthorizationContext methodAuthorizationContext = new MethodAuthorizationContext(mockMethodInvocation,
 				TestClass.class);
-		PreAnnotationAuthorizationManagerBeforeAdvice advice = new PreAnnotationAuthorizationManagerBeforeAdvice();
+		PreFilterAuthorizationMethodBeforeAdvice filter = new PreFilterAuthorizationMethodBeforeAdvice();
+		filter.before(authentication, methodAuthorizationContext);
+		PreAuthorizeAuthorizationManager advice = new PreAuthorizeAuthorizationManager();
 		AuthorizationDecision decision = advice.check(authentication, methodAuthorizationContext);
 		assertThat(decision).isNotNull();
 		assertThat(decision.isGranted()).isTrue();
@@ -151,8 +155,8 @@ public class PreAnnotationAuthorizationManagerBeforeAdviceTests {
 				new Object[] { new String[] {} });
 		MethodAuthorizationContext methodAuthorizationContext = new MethodAuthorizationContext(mockMethodInvocation,
 				TestClass.class);
-		PreAnnotationAuthorizationManagerBeforeAdvice advice = new PreAnnotationAuthorizationManagerBeforeAdvice();
-		assertThatIllegalArgumentException().isThrownBy(() -> advice.check(authentication, methodAuthorizationContext))
+		PreFilterAuthorizationMethodBeforeAdvice filter = new PreFilterAuthorizationMethodBeforeAdvice();
+		assertThatIllegalArgumentException().isThrownBy(() -> filter.before(authentication, methodAuthorizationContext))
 				.withMessage(
 						"A PreFilter expression was set but the method argument type class [Ljava.lang.String; is not filterable");
 	}
@@ -165,8 +169,8 @@ public class PreAnnotationAuthorizationManagerBeforeAdviceTests {
 				new Object[] { "", new ArrayList<>() });
 		MethodAuthorizationContext methodAuthorizationContext = new MethodAuthorizationContext(mockMethodInvocation,
 				TestClass.class);
-		PreAnnotationAuthorizationManagerBeforeAdvice advice = new PreAnnotationAuthorizationManagerBeforeAdvice();
-		assertThatIllegalStateException().isThrownBy(() -> advice.check(authentication, methodAuthorizationContext))
+		PreFilterAuthorizationMethodBeforeAdvice filter = new PreFilterAuthorizationMethodBeforeAdvice();
+		assertThatIllegalStateException().isThrownBy(() -> filter.before(authentication, methodAuthorizationContext))
 				.withMessage("Unable to determine the method argument for filtering. Specify the filter target.");
 	}
 
@@ -177,7 +181,7 @@ public class PreAnnotationAuthorizationManagerBeforeAdviceTests {
 				"doSomethingString", new Class[] { String.class }, new Object[] { "grant" });
 		MethodAuthorizationContext methodAuthorizationContext = new MethodAuthorizationContext(mockMethodInvocation,
 				TestClass.class);
-		PreAnnotationAuthorizationManagerBeforeAdvice advice = new PreAnnotationAuthorizationManagerBeforeAdvice();
+		PreAuthorizeAuthorizationManager advice = new PreAuthorizeAuthorizationManager();
 		AuthorizationDecision decision = advice.check(authentication, methodAuthorizationContext);
 		assertThat(decision).isNotNull();
 		assertThat(decision.isGranted()).isTrue();
@@ -190,7 +194,7 @@ public class PreAnnotationAuthorizationManagerBeforeAdviceTests {
 				"doSomethingString", new Class[] { String.class }, new Object[] { "deny" });
 		MethodAuthorizationContext methodAuthorizationContext = new MethodAuthorizationContext(mockMethodInvocation,
 				TestClass.class);
-		PreAnnotationAuthorizationManagerBeforeAdvice advice = new PreAnnotationAuthorizationManagerBeforeAdvice();
+		PreAuthorizeAuthorizationManager advice = new PreAuthorizeAuthorizationManager();
 		AuthorizationDecision decision = advice.check(authentication, methodAuthorizationContext);
 		assertThat(decision).isNotNull();
 		assertThat(decision.isGranted()).isFalse();
@@ -206,7 +210,9 @@ public class PreAnnotationAuthorizationManagerBeforeAdviceTests {
 				"doSomethingPreFilterPreAuthorizeList", new Class[] { List.class }, new Object[] { list });
 		MethodAuthorizationContext methodAuthorizationContext = new MethodAuthorizationContext(mockMethodInvocation,
 				TestClass.class);
-		PreAnnotationAuthorizationManagerBeforeAdvice advice = new PreAnnotationAuthorizationManagerBeforeAdvice();
+		PreFilterAuthorizationMethodBeforeAdvice filter = new PreFilterAuthorizationMethodBeforeAdvice();
+		filter.before(authentication, methodAuthorizationContext);
+		PreAuthorizeAuthorizationManager advice = new PreAuthorizeAuthorizationManager();
 		AuthorizationDecision decision = advice.check(authentication, methodAuthorizationContext);
 		assertThat(decision).isNotNull();
 		assertThat(decision.isGranted()).isTrue();
@@ -223,7 +229,9 @@ public class PreAnnotationAuthorizationManagerBeforeAdviceTests {
 				"doSomethingPreFilterPreAuthorizeList", new Class[] { List.class }, new Object[] { list });
 		MethodAuthorizationContext methodAuthorizationContext = new MethodAuthorizationContext(mockMethodInvocation,
 				TestClass.class);
-		PreAnnotationAuthorizationManagerBeforeAdvice advice = new PreAnnotationAuthorizationManagerBeforeAdvice();
+		PreFilterAuthorizationMethodBeforeAdvice filter = new PreFilterAuthorizationMethodBeforeAdvice();
+		filter.before(authentication, methodAuthorizationContext);
+		PreAuthorizeAuthorizationManager advice = new PreAuthorizeAuthorizationManager();
 		AuthorizationDecision decision = advice.check(authentication, methodAuthorizationContext);
 		assertThat(decision).isNotNull();
 		assertThat(decision.isGranted()).isFalse();

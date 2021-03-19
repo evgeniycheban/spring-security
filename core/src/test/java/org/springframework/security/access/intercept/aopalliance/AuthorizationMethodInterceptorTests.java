@@ -24,11 +24,10 @@ import org.junit.Test;
 
 import org.springframework.aop.MethodMatcher;
 import org.springframework.security.access.intercept.method.MockMethodInvocation;
-import org.springframework.security.access.method.AuthorizationManagerAfterAdvice;
-import org.springframework.security.access.method.AuthorizationManagerBeforeAdvice;
+import org.springframework.security.access.method.AuthorizationMethodAfterAdvice;
+import org.springframework.security.access.method.AuthorizationMethodBeforeAdvice;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.authentication.TestingAuthenticationToken;
-import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.context.SecurityContextImpl;
@@ -60,35 +59,34 @@ public class AuthorizationMethodInterceptorTests {
 		SecurityContextHolder.setContext(new SecurityContextImpl(authentication));
 		MockMethodInvocation mockMethodInvocation = new MockMethodInvocation(new TestClass(), TestClass.class,
 				"doSomethingString");
-		AuthorizationManagerBeforeAdvice<MethodInvocation> mockBeforeAdvice = mock(
-				AuthorizationManagerBeforeAdvice.class);
-		AuthorizationManagerAfterAdvice<MethodInvocation> mockAfterAdvice = mock(AuthorizationManagerAfterAdvice.class);
-		given(mockAfterAdvice.check(any(), eq(mockMethodInvocation), eq(null))).willReturn("abc");
+		AuthorizationMethodBeforeAdvice<MethodInvocation> mockBeforeAdvice = mock(
+				AuthorizationMethodBeforeAdvice.class);
+		AuthorizationMethodAfterAdvice<MethodInvocation> mockAfterAdvice = mock(AuthorizationMethodAfterAdvice.class);
+		given(mockAfterAdvice.after(any(), eq(mockMethodInvocation), eq(null))).willReturn("abc");
 		AuthorizationMethodInterceptor interceptor = new AuthorizationMethodInterceptor(mockBeforeAdvice,
 				mockAfterAdvice);
 		Object result = interceptor.invoke(mockMethodInvocation);
 		assertThat(result).isEqualTo("abc");
-		verify(mockBeforeAdvice).verify(any(), eq(mockMethodInvocation));
-		verify(mockAfterAdvice).check(any(), eq(mockMethodInvocation), eq(null));
+		verify(mockBeforeAdvice).before(any(), eq(mockMethodInvocation));
+		verify(mockAfterAdvice).after(any(), eq(mockMethodInvocation), eq(null));
 	}
 
 	@Test
 	public void invokeWhenNotAuthenticatedThenAuthenticationCredentialsNotFoundException() throws Exception {
 		MockMethodInvocation mockMethodInvocation = new MockMethodInvocation(new TestClass(), TestClass.class,
 				"doSomethingString");
-		AuthorizationManagerBeforeAdvice<MethodInvocation> beforeAdvice = new AuthorizationManagerBeforeAdvice<MethodInvocation>() {
+		AuthorizationMethodBeforeAdvice<MethodInvocation> beforeAdvice = new AuthorizationMethodBeforeAdvice<MethodInvocation>() {
 			@Override
 			public MethodMatcher getMethodMatcher() {
 				return MethodMatcher.TRUE;
 			}
 
 			@Override
-			public AuthorizationDecision check(Supplier<Authentication> authentication, MethodInvocation object) {
+			public void before(Supplier<Authentication> authentication, MethodInvocation object) {
 				authentication.get();
-				return null;
 			}
 		};
-		AuthorizationManagerAfterAdvice<MethodInvocation> mockAfterAdvice = mock(AuthorizationManagerAfterAdvice.class);
+		AuthorizationMethodAfterAdvice<MethodInvocation> mockAfterAdvice = mock(AuthorizationMethodAfterAdvice.class);
 		AuthorizationMethodInterceptor interceptor = new AuthorizationMethodInterceptor(beforeAdvice, mockAfterAdvice);
 		assertThatExceptionOfType(AuthenticationCredentialsNotFoundException.class)
 				.isThrownBy(() -> interceptor.invoke(mockMethodInvocation))

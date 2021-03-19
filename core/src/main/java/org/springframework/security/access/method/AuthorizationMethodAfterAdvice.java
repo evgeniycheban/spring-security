@@ -33,7 +33,7 @@ import org.springframework.security.core.Authentication;
  * @param <T> the type of object that the authorization check is being done one.
  * @author Evgeniy Cheban
  */
-public interface AuthorizationManagerAfterAdvice<T> extends Pointcut {
+public interface AuthorizationMethodAfterAdvice<T> extends Pointcut {
 
 	/**
 	 * Returns the default {@link ClassFilter}.
@@ -57,6 +57,6 @@ public interface AuthorizationManagerAfterAdvice<T> extends Pointcut {
 	 * <code>returnedObject</code> method argument)
 	 * @throws AccessDeniedException if access is not granted
 	 */
-	Object check(Supplier<Authentication> authentication, T object, Object returnedObject);
+	Object after(Supplier<Authentication> authentication, T object, Object returnedObject);
 
 }

@@ -23,8 +23,8 @@ import org.junit.Test;
 import org.springframework.aop.ClassFilter;
 import org.springframework.aop.MethodMatcher;
 import org.springframework.aop.support.ComposablePointcut;
-import org.springframework.security.access.method.AuthorizationManagerAfterAdvice;
-import org.springframework.security.access.method.AuthorizationManagerBeforeAdvice;
+import org.springframework.security.access.method.AuthorizationMethodAfterAdvice;
+import org.springframework.security.access.method.AuthorizationMethodBeforeAdvice;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
@@ -40,11 +40,11 @@ public class MethodSecurityAuthorizationManagerAdvisorTests {
 	@Test
 	public void getPointcutWhenBeforeAfterAdvicesProvidedThenUnionPointcut() {
 		Advice mockAdvice = mock(Advice.class);
-		AuthorizationManagerBeforeAdvice<MethodInvocation> mockBeforeAdvice = mock(
-				AuthorizationManagerBeforeAdvice.class);
+		AuthorizationMethodBeforeAdvice<MethodInvocation> mockBeforeAdvice = mock(
+				AuthorizationMethodBeforeAdvice.class);
 		given(mockBeforeAdvice.getClassFilter()).willReturn(ClassFilter.TRUE);
 		given(mockBeforeAdvice.getMethodMatcher()).willReturn(MethodMatcher.TRUE);
-		AuthorizationManagerAfterAdvice<MethodInvocation> mockAfterAdvice = mock(AuthorizationManagerAfterAdvice.class);
+		AuthorizationMethodAfterAdvice<MethodInvocation> mockAfterAdvice = mock(AuthorizationMethodAfterAdvice.class);
 		given(mockAfterAdvice.getClassFilter()).willReturn(ClassFilter.TRUE);
 		given(mockAfterAdvice.getMethodMatcher()).willReturn(MethodMatcher.TRUE);
 		MethodSecurityAuthorizationManagerAdvisor advisor = new MethodSecurityAuthorizationManagerAdvisor(mockAdvice,
@@ -55,11 +55,11 @@ public class MethodSecurityAuthorizationManagerAdvisorTests {
 	@Test
 	public void getAdviceWhenAdviceProvidedThenAdvice() {
 		Advice mockAdvice = mock(Advice.class);
-		AuthorizationManagerBeforeAdvice<MethodInvocation> mockBeforeAdvice = mock(
-				AuthorizationManagerBeforeAdvice.class);
+		AuthorizationMethodBeforeAdvice<MethodInvocation> mockBeforeAdvice = mock(
+				AuthorizationMethodBeforeAdvice.class);
 		given(mockBeforeAdvice.getClassFilter()).willReturn(ClassFilter.TRUE);
 		given(mockBeforeAdvice.getMethodMatcher()).willReturn(MethodMatcher.TRUE);
-		AuthorizationManagerAfterAdvice<MethodInvocation> mockAfterAdvice = mock(AuthorizationManagerAfterAdvice.class);
+		AuthorizationMethodAfterAdvice<MethodInvocation> mockAfterAdvice = mock(AuthorizationMethodAfterAdvice.class);
 		given(mockAfterAdvice.getClassFilter()).willReturn(ClassFilter.TRUE);
 		given(mockAfterAdvice.getMethodMatcher()).willReturn(MethodMatcher.TRUE);
 		MethodSecurityAuthorizationManagerAdvisor advisor = new MethodSecurityAuthorizationManagerAdvisor(mockAdvice,

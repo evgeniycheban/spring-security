@@ -16,6 +16,8 @@
 
 package org.springframework.security.access.method;
 
+import java.util.function.Supplier;
+
 import org.springframework.aop.ClassFilter;
 import org.springframework.aop.Pointcut;
 import org.springframework.security.authorization.AuthorizationManager;
@@ -29,7 +31,7 @@ import org.springframework.security.core.Authentication;
  * @param <T> the type of object that the authorization check is being done one.
  * @author Evgeniy Cheban
  */
-public interface AuthorizationManagerBeforeAdvice<T> extends AuthorizationManager<T>, Pointcut {
+public interface AuthorizationMethodBeforeAdvice<T> extends Pointcut {
 
 	/**
 	 * Returns the default {@link ClassFilter}.
@@ -40,4 +42,5 @@ public interface AuthorizationManagerBeforeAdvice<T> extends AuthorizationManage
 		return ClassFilter.TRUE;
 	}
 
+	void before(Supplier<Authentication> authentication, T object);
 }

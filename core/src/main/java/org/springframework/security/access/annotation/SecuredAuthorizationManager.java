@@ -23,12 +23,10 @@ import java.util.function.Supplier;
 
 import org.aopalliance.intercept.MethodInvocation;
 
-import org.springframework.aop.MethodMatcher;
 import org.springframework.aop.support.AopUtils;
-import org.springframework.aop.support.StaticMethodMatcher;
 import org.springframework.core.MethodClassKey;
 import org.springframework.core.annotation.AnnotationUtils;
-import org.springframework.security.access.method.AuthorizationManagerBeforeAdvice;
+import org.springframework.security.access.method.AuthorizationMethodBeforeAdvice;
 import org.springframework.security.access.method.MethodAuthorizationContext;
 import org.springframework.security.authorization.AuthorityAuthorizationManager;
 import org.springframework.security.authorization.AuthorizationDecision;
@@ -36,31 +34,18 @@ import org.springframework.security.authorization.AuthorizationManager;
 import org.springframework.security.core.Authentication;
 
 /**
- * An {@link AuthorizationManagerBeforeAdvice} which can determine if an
+ * An {@link AuthorizationMethodBeforeAdvice} which can determine if an
  * {@link Authentication} has access to the {@link MethodInvocation} by evaluating if the
  * {@link Authentication} contains a specified authority from the Spring Security's
  * {@link Secured} annotation.
  *
  * @author Evgeniy Cheban
  */
-public final class SecuredAnnotationAuthorizationManagerBeforeAdvice
-		implements AuthorizationManagerBeforeAdvice<MethodAuthorizationContext> {
+public final class SecuredAuthorizationManager implements AuthorizationManager<MethodAuthorizationContext> {
 
 	private static final AuthorizationManager<MethodAuthorizationContext> NULL_MANAGER = (a, o) -> null;
 
-	private final MethodMatcher methodMatcher = new StaticMethodMatcher() {
-		@Override
-		public boolean matches(Method method, Class<?> targetClass) {
-			return resolveManager(method, targetClass) != NULL_MANAGER;
-		}
-	};
-
 	private final Map<MethodClassKey, AuthorizationManager<MethodAuthorizationContext>> cachedManagers = new ConcurrentHashMap<>();
-
-	@Override
-	public MethodMatcher getMethodMatcher() {
-		return this.methodMatcher;
-	}
 
 	/**
 	 * Determines if an {@link Authentication} has access to the {@link MethodInvocation}
